@@ -159,9 +159,13 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
+	# Set up logging
+	logger = logging.getLogger()
+	logger.setLevel(logging.INFO if args.verbose else logging.DEBUG)
+
 	### Figure out the device to use for training
 	device = device_check(args.dev)
-	print(f"[+] Using device: {device}")
+	logger.info(f"[+] Using device: {device}")
 
 	# Define image transformations
 	# https://docs.pytorch.org/vision/master/transforms.html#v2-api-reference-recommended
