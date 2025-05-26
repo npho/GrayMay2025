@@ -107,18 +107,23 @@ if __name__ == "__main__":
 	parser.add_argument("-b", "--batch_size",
 					default=1, 
 					type=int, 
-					help="Batch size for testing.")				
+					help="Batch size for testing.")
+	parser.add_argument("-w", "--weights",
+					default=None, 
+					type=str, 
+					help="Path to the model weights file.")
 	parser.add_argument('-v', '--verbose', action='store_true')
 
 	args = parser.parse_args()
 
 	# Set up logging
+	logging.basicConfig(format="[+] %(message)s")
 	logger = logging.getLogger()
 	logger.setLevel(logging.NOTSET if args.verbose else logging.WARNING)
 
 	### Figure out the device to use for training
 	device = device_check(args.dev)
-	logger.info(f"[+] Using device: {device}")
+	logger.info(f"Using device: {device}")
 
 	# Initialize model
 	model = None
@@ -134,8 +139,7 @@ if __name__ == "__main__":
 		model = BrainTumorNet() # Default
 
 	# Do model evaluation
-	logging.info(f"[+] Your model is {args.model}:")
-	logging.info(model)
+	logging.info(f"Training the {args.model} model:\n{model}")
 
 	# Re-use transformations from training
 	transforms = v2.Compose([
@@ -157,6 +161,17 @@ if __name__ == "__main__":
 						num_workers=os.cpu_count()
 					)
 
+	# Load model weights if provided
+	if args.weights:
+		if os.path.exists(args.weights):
+			logger.info(f"Loading model weights: {args.weights}")
+			weights = torch.load(args.weights, weights_only=True)
+			model.load_state_dict(weights)
+		else:
+			logger.warning(f"Does weights file {args.weights} exist?")
+	else:
+		logger.info("No weights file provided, using untrained model.")
+	
 	### Testing
 	test(	
 		model=model, 
