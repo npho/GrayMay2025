@@ -10,8 +10,6 @@ from torch.utils.data import Dataset
 from torchvision.io import read_image
 from torchvision.transforms import v2
 
-import matplotlib.pyplot as plt
-
 # https://docs.pytorch.org/vision/main/auto_examples/transforms/plot_custom_transforms.html
 
 class ReduceChannel(torch.nn.Module):
