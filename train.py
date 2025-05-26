@@ -110,7 +110,7 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 
 			# Save weights at the end of each batch
 			if weights:
-				logging.info(f"Checkpoint model to {weights}")
+				#logging.info(f"Checkpoint model to {weights}")
 				torch.save(model.state_dict(), weights)
 		
 		pbar_batch.close()
