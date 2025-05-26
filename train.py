@@ -227,23 +227,29 @@ if __name__ == "__main__":
 		model = BrainTumorNet() # Default
 		logging.info(f"Testing the {args.model} model:\n{model}")
 
-		# Resume checkpoint training
+	total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+	logging.info(f'Model parameters: {total_params}')
+
+	# Resume checkpoint training
+	if args.weights:
 		if os.path.exists(args.weights):
 			logger.info(f"Using model weights: {args.weights}")
 			weights = torch.load(args.weights, weights_only=True)
 			model.load_state_dict(weights)
+		else:
+			logging.info(f"Does {args.weights} exist? Training from scratch.")
 
-		# Hyperparameters
-		loss_func = torch.nn.CrossEntropyLoss()
-		optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
+	# Hyperparameters
+	loss_func = torch.nn.CrossEntropyLoss()
+	optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
 
-		### Training and other stuff
-		train(	
-			model=model,
-			weights=args.weights,
-			epochs=args.epochs,
-			data=[data_train, data_val], 
-			device=device,
-			loss_func=loss_func,
-			optimizer=optimizer
-		)
+	### Training and other stuff
+	train(	
+		model=model,
+		weights=args.weights,
+		epochs=args.epochs,
+		data=[data_train, data_val], 
+		device=device,
+		loss_func=loss_func,
+		optimizer=optimizer
+	)
