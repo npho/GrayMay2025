@@ -5,8 +5,20 @@ KaggleBrainDataset.py (May 2025)
 import os
 import kagglehub
 
+import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image
+from torchvision.transforms import v2
+
+import matplotlib.pyplot as plt
+
+# https://docs.pytorch.org/vision/main/auto_examples/transforms/plot_custom_transforms.html
+
+class ReduceChannel(torch.nn.Module):
+	def forward(self, img, c=1):
+		_, h, w = img.shape
+		img = img[0].reshape((c, h, w))
+		return img
 
 # https://docs.pytorch.org/tutorials/beginner/basics/data_tutorial.html
 
@@ -75,10 +87,19 @@ class KaggleBrainDataset(Dataset):
 if __name__ == "__main__":
 	print("The Kaggle Brain Tumor Dataset")
 
+	# https://docs.pytorch.org/vision/master/transforms.html#v2-api-reference-recommended
+	transforms = v2.Compose([
+		ReduceChannel(),
+		v2.ToDtype(torch.float32, scale=True),
+		v2.Normalize(mean=[0], std=[1]),
+		v2.Resize(size=(512, 512)),
+		v2.RandomHorizontalFlip(p=0.5),
+	])
+
 	# Demonstrate training data set
-	kaggle = KaggleBrainDataset()
+	kaggle = KaggleBrainDataset(transform=transforms)
 	print(f"\tNumber of training images: {len(kaggle)}")
 
 	# Demonstrate testing data set
-	kaggle = KaggleBrainDataset(train=False)
+	kaggle = KaggleBrainDataset(train=False, transform=transforms)
 	print(f"\tNumber of testing images: {len(kaggle)}")
