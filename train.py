@@ -227,7 +227,9 @@ if __name__ == "__main__":
 	# Determine model size
 	# https://www.geeksforgeeks.org/check-the-total-number-of-parameters-in-a-pytorch-model/
 	total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-	logging.info(f'Model parameters: {total_params}')
+	logging.info(f'Model total parameters: {total_params}')
+	total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+	logging.info(f'Model trainable parameters: {total_params}')
 
 	# Resume checkpoint training
 	if args.weights:
