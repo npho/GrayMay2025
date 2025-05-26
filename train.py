@@ -166,29 +166,32 @@ if __name__ == "__main__":
 						num_workers=os.cpu_count()
 					)
 	
+	# TODO figure out training/validation
+
 	# Initialize model
 	model = None
 	
 	# Instantiate model choice
-	if args.model == "BrainTumorNet":
-		model = BrainTumorNet()
-	elif args.model == "ViT":
-		pass # Nels TODO
+	if args.model == "ViT":
+		# Nels TODO initiatiate model
+		pass
+		
+		# Nels TODO train model
+		pass 
 	else:
 		model = BrainTumorNet() # Default
+		print(model)
 
-	print(model)
+		# Hyperparameters
+		loss_func = torch.nn.CrossEntropyLoss()
+		optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
 
-	# Hyperparameters
-	loss_func = torch.nn.CrossEntropyLoss()
-	optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
-		
-	### Training and other stuff
-	train(	
-		model=model, 
-		epochs=args.epochs,
-		data=data_train, 
-		device=device,
-		loss_func=loss_func,
-		optimizer=optimizer
-	)
+		### Training and other stuff
+		train(	
+			model=model, 
+			epochs=args.epochs,
+			data=data_train, 
+			device=device,
+			loss_func=loss_func,
+			optimizer=optimizer
+		)
