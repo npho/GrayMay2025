@@ -56,7 +56,7 @@ class KaggleBrainDataset(Dataset):
 		
 		assert len(self.file) == len(self.label_idx), "Image and label count mismatch!!!"
 
-		self.length = len(self.file)
+		self.length = len(self.label_idx)
 
 	def __len__(self):		
 		return self.length
@@ -76,7 +76,11 @@ class KaggleBrainDataset(Dataset):
 
 if __name__ == "__main__":
 	print("The Kaggle Brain Tumor Dataset")
+
+	# Demonstrate training data set
 	kaggle = KaggleBrainDataset()
 	print(f"\tNumber of training images: {len(kaggle)}")
+
+	# Demonstrate testing data set
 	kaggle = KaggleBrainDataset(train=False)
 	print(f"\tNumber of testing images: {len(kaggle)}")
