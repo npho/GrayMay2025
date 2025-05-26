@@ -42,16 +42,30 @@ data (7,022 images)
 
 The `KaggleBrainDataset.py` script will load and prepare the data set. Please provide the path for downloading and loading images. It will default to a `data` folder in the current working directory through the `KAGGLEHUB_CACHE` environment variable.
 
-```bash
-python KaggleBrainDataset.py
-```
-
 ### Methods
 
 Exploring the use of convolutional neural networks (CNNs) for image classification as well as Vision Transformers (ViTs) for the same task.
 
 ```bash
-python train.py --help
+$ python train.py -h       
+usage: train.py [-h] [-m {BrainTumorNet,ViT}] [-d {cpu,gpu,mps}] [-e EPOCHS] [-b BATCH_SIZE]
+                [-v]
+
+Kaggle Brain Tumor MRI Dataset Training Script
+
+options:
+  -h, --help            show this help message and exit
+  -m {BrainTumorNet,ViT}, --model {BrainTumorNet,ViT}
+                        Model selection.
+  -d {cpu,gpu,mps}, --dev {cpu,gpu,mps}, --device {cpu,gpu,mps}
+                        Device to use for training [cpu, gpu, mps], defaults to automatic
+                        detection.
+  -e EPOCHS, --epochs EPOCHS
+                        Number of epochs to train the model.
+  -b BATCH_SIZE, --batch_size BATCH_SIZE
+                        Batch size for training.
+  -v, --verbose
+$
 ```
 
 
