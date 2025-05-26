@@ -8,30 +8,42 @@ Lecture content from *Neural Network Methods for Signals in Engineering and Phys
 
 ### Data Set
 
-A neuroscience data set with brain images of tumor-normal pairs.
+A MRI scan data set with brain images of various brain tumors (i.e., glioma, meningioma, pituitary) and normal scans from Kaggle [[www](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset/data)].
 
-To prepare the data set, unzip it in the current directory. The `.gitignore` file should prevent the `tumor_diagnosis` directory from being tracked by Git.
+```
+data (7,022 images)
+├── Training (5,712 images)
+│   ├── notumor (1,595 images)
+│   │   ├── Te-no_0000.jpg
+│   │   └── ...
+│   ├── glioma (1,321 images)
+│   │   ├── Te-gl_0000.jpg
+│   │   └── ...
+│   ├── meningioma (1,339 images)
+│   │   ├── Te-me_0000.jpg
+│   │   └── ...
+│   └── pituitary (1,457 images)
+│       ├── Te-pi_0000.jpg
+│       └── ...
+└── Testing (1,311 images)
+    ├── notumor (405 images)
+    │   ├── Te-no_0000.jpg
+    │   └── ...
+    ├── glioma (300 images)
+    │   ├── Te-gl_0000.jpg
+    │   └── ...
+    ├── meningioma (306 images)
+    │   ├── Te-me_0000.jpg
+    │   └── ...
+    └── pituitary (300 images)
+        ├── Te-pi_0000.jpg
+        └── ...
+```
+
+The `KaggleBrainDataset.py` script will load and prepare the data set. Please provide the path for downloading and loading images. It will default to a `data` folder in the current working directory through the `KAGGLEHUB_CACHE` environment variable.
 
 ```bash
-unzip data-tumor.zip
-```
-
-The resulting directory is __ images.
-
-```
-tumor_diagnosis
-└── test
-│   ├── 0_0.png
-│   ├── ...
-│   └── 0_1.png
-└── train_normal
-│   ├── 0_0.png
-│   ├── ...
-│   └── 0_1.png
-└── train_tumorous
-    ├── 0_0.png
-    ├── ...
-    └── 0_1.png
+python KaggleBrainDataset.py
 ```
 
 ### Methods
