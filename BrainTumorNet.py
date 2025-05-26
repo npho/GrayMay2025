@@ -14,20 +14,20 @@ class BrainTumorNet(torch.nn.Module):
 		super(BrainTumorNet, self).__init__()
 		
 		self.cnn1 = nn.Sequential(
-			nn.Conv2d(in_channels=1, out_channels=8, kernel_size=5, stride=1, padding=1),
+			nn.Conv2d(in_channels=1, out_channels=8, kernel_size=12, stride=2, padding=2),
 			nn.ReLU(),
-			nn.AvgPool2d(kernel_size=2)
+			nn.AvgPool2d(kernel_size=12, stride=2, padding=2)
 		)
 		
 		self.cnn2 = nn.Sequential(
-			nn.Conv2d(in_channels=8, out_channels=128, kernel_size=3, stride=1, padding=1),
+			nn.Conv2d(in_channels=8, out_channels=128, kernel_size=12, stride=2, padding=2),
 			nn.ReLU(),
-			nn.MaxPool2d(kernel_size=2)
+			nn.MaxPool2d(kernel_size=12, stride=2, padding=2)
 		)
 		
 		l = 500
 		self.fc1 = nn.Sequential(
-			nn.Linear(128*6*6, l),
+			nn.Linear(86528, l),
 			nn.ReLU(),
 			nn.Linear(l, 4)
 		)
