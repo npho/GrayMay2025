@@ -4,6 +4,7 @@ train.py (May 2025)
 
 import os
 import argparse
+import logging
 import numpy as np
 import tqdm
 
@@ -70,10 +71,9 @@ def train(model, epochs, data, device, loss_func, optimizer):
 
 		# batches (data.dataset.length)
 		pbar_batch = tqdm.tqdm(total=len(data_train), colour="blue", desc="Batch", leave=False)
-		for batch, samples in enumerate(data_train):
-			images, labels = samples
-			images.to(device)
-			labels.to(device)
+		for batch, (images, labels) in enumerate(data_train):
+			images = images.to(device)
+			labels = labels.to(device)
 
 			train_outputs = model(images)
 			loss = loss_func(train_outputs, labels)
@@ -84,24 +84,22 @@ def train(model, epochs, data, device, loss_func, optimizer):
 			loss.backward() # Calculate gradient
 			optimizer.step() # Update weights
 
-			# Compute Validation Accuracy
+			# Compute validation accuracy
 			val_pred = []
 			val_lbls = []
 			with torch.no_grad():
-				for _, samples in enumerate(data_val):
-					images, labels = samples
-					images.to(device)
-					labels.to(device)
+				for _, (images, labels) in enumerate(data_val):
+					images = images.to(device)
+					labels = labels.to(device)
 				
-					val_pred += model(images).tolist()
-					val_lbls += labels.tolist()
+					val_pred += model(images).cpu().tolist()
+					val_lbls += labels.cpu().tolist()
 			
 			# numpy object for vectorization
-			val_pred = np.array(val_pred)
+			val_pred = np.array(val_pred).argmax(axis=1)
 			val_lbls = np.array(val_lbls)
 
 			# Get validation accuracy
-			val_pred = np.argmax(val_pred, axis=1)
 			validation_batch.append((val_pred == val_lbls).mean())
 
 			pbar_batch.set_postfix({
@@ -144,7 +142,7 @@ if __name__ == "__main__":
 	parser.add_argument("--split",
 					default=0.8,
 					type=float,
-					help="Train-test split ratio, defaults to 0.8 (80% train, 20% validation).")
+					help="Train-test split ratio, defaults to 0.8 (80%% train, 20%% validation).")
 	parser.add_argument("-b", "--batch_size",
 					default=64, 
 					type=int, 
