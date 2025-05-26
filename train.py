@@ -13,6 +13,7 @@ from KaggleBrainDataset import ReduceChannel
 from BrainTumorNet import BrainTumorNet
 
 import torch
+from torch.utils.data import random_split
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 
@@ -58,6 +59,9 @@ def train(model, epochs, data, device, loss_func, optimizer):
 	# Stage model on whatever device we are using
 	model.to(device)
 
+	# Split out the training and validation DataLoaders
+	data_train, data_val = data
+
 	# Prettier tqdm progress bar
 	pbar_epoch = tqdm.tqdm(iterable=range(epochs), colour="green", desc="Epoch")
 	for epoch in pbar_epoch:
@@ -65,28 +69,40 @@ def train(model, epochs, data, device, loss_func, optimizer):
 		validation_batch = []
 
 		# batches (data.dataset.length)
-		pbar_batch = tqdm.tqdm(total=len(data), colour="blue", desc="Batch", leave=False)
-		for batch, samples in enumerate(data):
+		pbar_batch = tqdm.tqdm(total=len(data_train), colour="blue", desc="Batch", leave=False)
+		for batch, samples in enumerate(data_train):
 			images, labels = samples
 			images.to(device)
 			labels.to(device)
 
 			train_outputs = model(images)
 			loss = loss_func(train_outputs, labels)
-			loss_batch.append(loss.item())
+			loss_batch.append(loss.item()) # batch loss
 			
 			# Batch-level backpropagation
 			optimizer.zero_grad() # Zero gradients from previous epoch
 			loss.backward() # Calculate gradient
 			optimizer.step() # Update weights
 
-			"""
 			# Compute Validation Accuracy
+			val_pred = []
+			val_lbls = []
 			with torch.no_grad():
-				validation_outputs = model(validation_features)
-				_, predicted = torch.max(validation_outputs, 1)
-			"""
-			validation_batch.append(0)
+				for _, samples in enumerate(data_val):
+					images, labels = samples
+					images.to(device)
+					labels.to(device)
+				
+					val_pred += model(images).tolist()
+					val_lbls += labels.tolist()
+			
+			# numpy object for vectorization
+			val_pred = np.array(val_pred)
+			val_lbls = np.array(val_lbls)
+
+			# Get validation accuracy
+			val_pred = np.argmax(val_pred, axis=1)
+			validation_batch.append((val_pred == val_lbls).mean())
 
 			pbar_batch.set_postfix({
 					"Loss" : loss_batch[batch],
@@ -125,6 +141,10 @@ if __name__ == "__main__":
 					default=10, 
 					type=int, 
 					help="Number of epochs to train the model.")
+	parser.add_argument("--split",
+					default=0.8,
+					type=float,
+					help="Train-test split ratio, defaults to 0.8 (80% train, 20% validation).")
 	parser.add_argument("-b", "--batch_size",
 					default=64, 
 					type=int, 
@@ -158,15 +178,28 @@ if __name__ == "__main__":
 	# Load the dataset
 	kaggle = KaggleBrainDataset(train=True, transform=transforms)
 
+	# train-test split
+	n_train = int(len(kaggle) * args.split)
+	n_val = len(kaggle) - n_train
+	data_train, data_val = random_split(kaggle, [n_train, n_val])
+
 	# https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
+	
+	# Creates the DataLoader for the training split
 	data_train = DataLoader(
-						kaggle, 
+						data_train, 
 						batch_size=args.batch_size, 
 						shuffle=True,
 						num_workers=os.cpu_count()
 					)
-	
-	# TODO figure out training/validation
+
+	# Creates the DataLoader for the validation split					
+	data_val = DataLoader(
+						data_val, 
+						batch_size=args.batch_size, 
+						shuffle=True,
+						num_workers=os.cpu_count()
+					)
 
 	# Initialize model
 	model = None
@@ -177,7 +210,7 @@ if __name__ == "__main__":
 		pass
 		
 		# Nels TODO train model
-		pass 
+		pass
 	else:
 		model = BrainTumorNet() # Default
 		print(model)
@@ -190,7 +223,7 @@ if __name__ == "__main__":
 		train(	
 			model=model, 
 			epochs=args.epochs,
-			data=data_train, 
+			data=[data_train, data_val], 
 			device=device,
 			loss_func=loss_func,
 			optimizer=optimizer
