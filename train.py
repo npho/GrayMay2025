@@ -220,13 +220,12 @@ if __name__ == "__main__":
 	if args.model == "ViT":
 		# Nels TODO initiatiate model
 		pass
-		
-		# Nels TODO train model
-		pass
 	else:
 		model = BrainTumorNet() # Default
 		logging.info(f"Testing the {args.model} model:\n{model}")
 
+	# Determine model size
+	# https://www.geeksforgeeks.org/check-the-total-number-of-parameters-in-a-pytorch-model/
 	total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 	logging.info(f'Model parameters: {total_params}')
 
