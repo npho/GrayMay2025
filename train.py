@@ -53,7 +53,7 @@ def device_check(req_dev):
 
 	return device
 
-def train(model, epochs, data, device, loss_func, optimizer):
+def train(model, weights, epochs, data, device, loss_func, optimizer):
 	loss_epoch = []
 	validation_epoch = []
 
@@ -107,6 +107,11 @@ def train(model, epochs, data, device, loss_func, optimizer):
 					"Acc" : validation_batch[batch],
 				})
 			pbar_batch.update(1)
+
+			# Save weights at the end of each batch
+			if weights:
+				logging.info(f"Checkpoint model to {weights}")
+				torch.save(model.state_dict(), weights)
 		
 		pbar_batch.close()
 
@@ -155,17 +160,22 @@ if __name__ == "__main__":
 					default=0.0001, 
 					type=float, 
 					help="Weight decay for the optimizer.")
+	parser.add_argument("-w", "--weights",
+					default=None, 
+					type=str, 
+					help="Path to store or load the model weights file, if any.")
 	parser.add_argument('-v', '--verbose', action='store_true')
 
 	args = parser.parse_args()
 
 	# Set up logging
+	logging.basicConfig(format="[+] %(message)s")
 	logger = logging.getLogger()
-	logger.setLevel(logging.INFO if args.verbose else logging.DEBUG)
+	logger.setLevel(logging.NOTSET if args.verbose else logging.WARNING)
 
 	### Figure out the device to use for training
 	device = device_check(args.dev)
-	logger.info(f"[+] Using device: {device}")
+	logger.info(f"Using device: {device}")
 
 	# Define image transformations
 	# https://docs.pytorch.org/vision/master/transforms.html#v2-api-reference-recommended
@@ -215,7 +225,13 @@ if __name__ == "__main__":
 		pass
 	else:
 		model = BrainTumorNet() # Default
-		print(model)
+		logging.info(f"Testing the {args.model} model:\n{model}")
+
+		# Resume checkpoint training
+		if os.path.exists(args.weights):
+			logger.info(f"Using model weights: {args.weights}")
+			weights = torch.load(args.weights, weights_only=True)
+			model.load_state_dict(weights)
 
 		# Hyperparameters
 		loss_func = torch.nn.CrossEntropyLoss()
@@ -223,7 +239,8 @@ if __name__ == "__main__":
 
 		### Training and other stuff
 		train(	
-			model=model, 
+			model=model,
+			weights=args.weights,
 			epochs=args.epochs,
 			data=[data_train, data_val], 
 			device=device,
