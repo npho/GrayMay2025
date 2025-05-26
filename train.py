@@ -51,37 +51,59 @@ def device_check(req_dev):
 
 	return device
 
-def train(model, epochs, data, device):
-	train_loss_list = np.zeros(epochs)
-	validation_accuracy_list = np.zeros(epochs)
+def train(model, epochs, data, device, loss_func, optimizer):
+	loss_epoch = []
+	validation_epoch = []
 
 	# Stage model on whatever device we are using
 	model.to(device)
 
 	# Prettier tqdm progress bar
-	pbar = tqdm.tqdm(iterable=range(epochs), colour="green", desc="Epoch")
+	pbar_epoch = tqdm.tqdm(iterable=range(epochs), colour="green", desc="Epoch")
+	for epoch in pbar_epoch:
+		loss_batch = []
+		validation_batch = []
 
-	for epoch in pbar:
-		# batches
-		for i, samples in enumerate(data):
+		# batches (data.dataset.length)
+		pbar_batch = tqdm.tqdm(total=len(data), colour="blue", desc="Batch", leave=False)
+		for batch, samples in enumerate(data):
 			images, labels = samples
 			images.to(device)
 			labels.to(device)
+
+			train_outputs = model(images)
+			loss = loss_func(train_outputs, labels)
+			loss_batch.append(loss.item())
 			
-			print(f"Batch {i}: Images shape: {images.shape}, Labels shape: {labels.shape}")
+			# Batch-level backpropagation
+			optimizer.zero_grad() # Zero gradients from previous epoch
+			loss.backward() # Calculate gradient
+			optimizer.step() # Update weights
 
-			if i == 1:
-				break
+			"""
+			# Compute Validation Accuracy
+			with torch.no_grad():
+				validation_outputs = model(validation_features)
+				_, predicted = torch.max(validation_outputs, 1)
+			"""
+			validation_batch.append(0)
+
+			pbar_batch.set_postfix({
+					"Loss" : loss_batch[batch],
+					"Acc" : validation_batch[batch],
+				})
+			pbar_batch.update(1)
 		
-		# Display loss and accuracy in tqdm progress bar
-		pbar.set_postfix({
-				# full-batch gradient descent version
-				#"Loss" : train_loss_list[epoch], 
-				#"Accuracy" : validation_accuracy_list[epoch]
+		pbar_batch.close()
 
-				# mini-batch gradient descent version
-				#"Loss" : train_loss_list[z], 
-				#"Accuracy" : validation_accuracy_list[z]
+		# Save batch stats at the epoch level
+		loss_epoch.append(loss_batch)
+		validation_epoch.append(validation_batch)
+
+		# Display loss and accuracy in tqdm progress bar
+		pbar_epoch.set_postfix({
+				"Loss" : np.mean(loss_epoch[epoch]), 
+				"Acc" : np.mean(validation_epoch[epoch])
 			})
 
 if __name__ == "__main__":
@@ -107,6 +129,14 @@ if __name__ == "__main__":
 					default=64, 
 					type=int, 
 					help="Batch size for training.")
+	parser.add_argument("-l", "--learning_rate",
+					default=0.001, 
+					type=float, 
+					help="Learning rate for the optimizer.")
+	parser.add_argument("--decay",
+					default=0.0001, 
+					type=float, 
+					help="Weight decay for the optimizer.")
 	parser.add_argument('-v', '--verbose', action='store_true')
 
 	args = parser.parse_args()
@@ -127,11 +157,6 @@ if __name__ == "__main__":
 
 	# Load the dataset
 	kaggle = KaggleBrainDataset(train=True, transform=transforms)
-	"""
-	for i in range(len(kaggle)):
-		image, label = kaggle[i]
-		print(f"Image {i}: {image.shape}, Label: {label}")
-	"""
 
 	# https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.DataLoader
 	data_train = DataLoader(
@@ -153,11 +178,17 @@ if __name__ == "__main__":
 		model = BrainTumorNet() # Default
 
 	print(model)
+
+	# Hyperparameters
+	loss_func = torch.nn.CrossEntropyLoss()
+	optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
 		
 	### Training and other stuff
 	train(	
 		model=model, 
-		epochs=args.epochs, 
+		epochs=args.epochs,
 		data=data_train, 
-		device=device
+		device=device,
+		loss_func=loss_func,
+		optimizer=optimizer
 	)
