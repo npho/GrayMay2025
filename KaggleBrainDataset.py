@@ -12,13 +12,30 @@ from torchvision.transforms import v2
 
 # https://docs.pytorch.org/vision/main/auto_examples/transforms/plot_custom_transforms.html
 
+
 class ReduceChannel(torch.nn.Module):
 	def forward(self, img, c=1):
 		_, h, w = img.shape
 		img = img[0].reshape((c, h, w))
 		return img
+	
+
+class EnsureRGB(torch.nn.Module):
+    def forward(self, img: torch.Tensor) -> torch.Tensor:
+        if img.shape[0] == 1:
+            # Grayscale → RGB by repeating
+            return img.repeat(3, 1, 1)
+        elif img.shape[0] == 4:
+            # RGBA → RGB by slicing off alpha
+            return img[:3, :, :]
+        elif img.shape[0] == 3:
+            # Already RGB
+            return img
+        else:
+            raise ValueError(f"Unsupported number of channels: {img.shape[0]}")
 
 # https://docs.pytorch.org/tutorials/beginner/basics/data_tutorial.html
+
 
 class KaggleBrainDataset(Dataset):
 	"""The Kaggle Brain Tumor MRI Dataset."""
