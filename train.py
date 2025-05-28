@@ -8,6 +8,8 @@ import logging
 import numpy as np
 import tqdm
 
+import matplotlib.pyplot as plt
+
 from KaggleBrainDataset import KaggleBrainDataset
 from KaggleBrainDataset import ReduceChannel, EnsureRGB
 
@@ -127,6 +129,8 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 				"Loss": np.mean(loss_epoch[epoch]), 
 				"Acc": np.mean(validation_epoch[epoch])
 			})
+		
+	return validation_epoch, loss_epoch
 		
 
 def generate_dataloaders(train=True, transforms=None, num_workers=4):
@@ -275,12 +279,34 @@ if __name__ == "__main__":
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
 
 	# Training and other stuff
-	train(
+	validation, loss = train(
 		model=model,
 		weights=args.weights,
 		epochs=args.epochs,
-		data=[data_train, data_val],
+		data=[data_train, data_val], 
 		device=device,
 		loss_func=loss_func,
 		optimizer=optimizer
-		)
+	)
+
+	epochs = range(1, len(validation)+1)
+
+	plt.figure(figsize=(8, 5))
+	plt.plot(epochs, validation, marker='o', color='blue', label='Validation Accuracy')
+	plt.title('Validation Accuracy per Epoch')
+	plt.xlabel('Epoch')
+	plt.ylabel('Validation Accuracy (%)')
+	plt.grid(True)
+	plt.legend()
+	plt.savefig('validation_accuracy.png')  # Save to file
+	plt.close()  # Close the plot
+
+	plt.figure(figsize=(8, 5))
+	plt.plot(epochs, loss, marker='o', color='red', label='Training Loss')
+	plt.title('Training Loss per Epoch')
+	plt.xlabel('Epoch')
+	plt.ylabel('Training Loss')
+	plt.grid(True)
+	plt.legend()
+	plt.savefig('training_loss.png')  # Save to file
+	plt.close()
