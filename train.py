@@ -8,6 +8,8 @@ import logging
 import numpy as np
 import tqdm
 
+import matplotlib.pyplot as plt
+
 from KaggleBrainDataset import KaggleBrainDataset
 from KaggleBrainDataset import ReduceChannel, EnsureRGB
 
@@ -57,8 +59,9 @@ def device_check(req_dev):
 
 
 def train(model, weights, epochs, data, device, loss_func, optimizer):
-	loss_epoch = []
-	validation_epoch = []
+	train_loss_epoch = []
+	val_loss_epoch = []
+	val_accuracy_epoch = []
 
 	# Stage model on whatever device we are using
 	model.to(device)
@@ -69,8 +72,9 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 	# Prettier tqdm progress bar
 	pbar_epoch = tqdm.tqdm(iterable=range(epochs), colour="green", desc="Epoch")
 	for epoch in pbar_epoch:
-		loss_batch = []
-		validation_batch = []
+		train_loss_batch = []
+		val_loss_batch = []
+		val_accuracy_batch = []
 
 		# batches (data.dataset.length)
 		pbar_batch = tqdm.tqdm(total=len(data_train), colour="blue", desc="Batch", leave=False)
@@ -80,35 +84,42 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 
 			train_outputs = model(images)
 			loss = loss_func(train_outputs, labels)
-			loss_batch.append(loss.item()) # batch loss
+			train_loss_batch.append(loss.item()) # batch loss
 			
 			# Batch-level backpropagation
 			optimizer.zero_grad() # Zero gradients from previous epoch
 			loss.backward() # Calculate gradient
 			optimizer.step() # Update weights
 
-			# Compute validation accuracy
-			val_pred = []
-			val_lbls = []
-			with torch.no_grad():
-				for _, (images, labels) in enumerate(data_val):
-					images = images.to(device)
-					labels = labels.to(device)
+			if batch % 5 == 0 and batch != 0:
+				# Compute validation accuracy
+				val_pred = []
+				val_lbls = []
+				val_loss = []
+				with torch.no_grad():
+					for _, (images, labels) in enumerate(data_val):
+						images = images.to(device)
+						labels = labels.to(device)
+
+						val_outputs = model(images)
+						val_loss_iter = loss_func(val_outputs, labels)
+						val_loss.append(val_loss_iter.item())
+						val_pred += model(images).cpu().tolist()
+						val_lbls += labels.cpu().tolist()
 				
-					val_pred += model(images).cpu().tolist()
-					val_lbls += labels.cpu().tolist()
-			
-			# numpy object for vectorization
-			val_pred = np.array(val_pred).argmax(axis=1)
-			val_lbls = np.array(val_lbls)
+				# numpy object for vectorization
+				val_pred = np.array(val_pred).argmax(axis=1)
+				val_lbls = np.array(val_lbls)
 
-			# Get validation accuracy
-			validation_batch.append((val_pred == val_lbls).mean())
+				# Get validation accuracy
+				val_accuracy_batch.append((val_pred == val_lbls).mean())
+				val_loss_batch.append(np.array(val_loss).mean())
 
-			pbar_batch.set_postfix({
-					"Loss": loss_batch[batch],
-					"Acc": validation_batch[batch],
-				})
+				pbar_batch.set_postfix({
+						"Loss": train_loss_batch[-1],
+						"Acc": val_accuracy_batch[-1],
+					})
+				
 			pbar_batch.update(1)
 
 			# Save weights at the end of each batch
@@ -119,14 +130,17 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 		pbar_batch.close()
 
 		# Save batch stats at the epoch level
-		loss_epoch.append(loss_batch)
-		validation_epoch.append(validation_batch)
+		val_loss_epoch.append(np.mean(val_loss_batch))
+		val_accuracy_epoch.append(np.mean(val_accuracy_batch))
+		train_loss_epoch.append(np.mean(train_loss_batch))
 
 		# Display loss and accuracy in tqdm progress bar
 		pbar_epoch.set_postfix({
-				"Loss": np.mean(loss_epoch[epoch]), 
-				"Acc": np.mean(validation_epoch[epoch])
+				"Loss": np.mean(val_loss_epoch[epoch]), 
+				"Acc": np.mean(val_accuracy_epoch[epoch])
 			})
+		
+	return val_accuracy_epoch, val_loss_epoch, train_loss_epoch
 		
 
 def generate_dataloaders(train=True, transforms=None, num_workers=4):
@@ -275,7 +289,7 @@ if __name__ == "__main__":
 	optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.decay)
 
 	# Training and other stuff
-	train(
+	val_accuracy, val_loss, train_loss = train(
 		model=model,
 		weights=args.weights,
 		epochs=args.epochs,
@@ -283,4 +297,26 @@ if __name__ == "__main__":
 		device=device,
 		loss_func=loss_func,
 		optimizer=optimizer
-		)
+	)
+
+	epochs = range(1, len(val_loss)+1)
+
+	plt.figure(figsize=(8, 5))
+	plt.plot(epochs, val_accuracy, marker='o', color='blue', label='Validation Accuracy')
+	plt.title('Validation Accuracy per Epoch')
+	plt.xlabel('Epoch')
+	plt.ylabel('Validation Accuracy (%)')
+	plt.grid(True)
+	plt.legend()
+	plt.savefig('validation_accuracy.png')  # Save to file
+	plt.close()  # Close the plot
+
+	plt.figure(figsize=(8, 5))
+	plt.plot(epochs, val_loss, marker='o', color='blue', label='Validation Loss')
+	plt.plot(epochs, train_loss, marker='o', color='red', label='Training Loss')	plt.title('Training Loss per Epoch')
+	plt.xlabel('Epoch')
+	plt.ylabel('Training Loss')
+	plt.grid(True)
+	plt.legend()
+	plt.savefig('training_loss.png')  # Save to file
+	plt.close()
