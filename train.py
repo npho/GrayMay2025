@@ -91,7 +91,7 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 			loss.backward() # Calculate gradient
 			optimizer.step() # Update weights
 
-			if batch % 5 == 0 and batch != 0:
+			if batch % 35 == 0 and batch != 0:
 				# Compute validation accuracy
 				val_pred = []
 				val_lbls = []
@@ -186,7 +186,7 @@ if __name__ == "__main__":
 					help="Model selection.")
 	parser.add_argument("-d", "--dev", "--device", 
 					default=None, 
-					choices=["cpu", "gpu", "mps"],
+					choices=["cpu", "cuda", "mps"],
 					type=str,
 					help="Device to use for training [cpu, gpu, mps], defaults to automatic detection.")
 	parser.add_argument("-e", "--epochs",
@@ -261,7 +261,7 @@ if __name__ == "__main__":
 			model = TumorViT(vit_path=args.pretrain)
 		else:
 			# default model from Hugging Face
-			model = TumorViT(vit_path="google/vit-base-patch16-224")
+			model = TumorViT(vit_path="google/vit-large-patch16-224")
 	else:
 		data_train, data_val = generate_dataloaders(train=True, transforms=transforms)
 		model = BrainTumorNet()  # Default
@@ -313,9 +313,10 @@ if __name__ == "__main__":
 
 	plt.figure(figsize=(8, 5))
 	plt.plot(epochs, val_loss, marker='o', color='blue', label='Validation Loss')
-	plt.plot(epochs, train_loss, marker='o', color='red', label='Training Loss')	plt.title('Training Loss per Epoch')
+	plt.plot(epochs, train_loss, marker='o', color='red', label='Training Loss')
+	plt.title('Loss per Epoch')
 	plt.xlabel('Epoch')
-	plt.ylabel('Training Loss')
+	plt.ylabel('Loss')
 	plt.grid(True)
 	plt.legend()
 	plt.savefig('training_loss.png')  # Save to file
