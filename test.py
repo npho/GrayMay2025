@@ -7,11 +7,14 @@ import argparse
 import logging
 import numpy as np
 import tqdm
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 
 from KaggleBrainDataset import KaggleBrainDataset
-from KaggleBrainDataset import ReduceChannel
+from KaggleBrainDataset import ReduceChannel, EnsureRGB
 
 from BrainTumorNet import BrainTumorNet
+from TumorViT import TumorViT
 
 import torch
 from torch.utils.data import DataLoader
@@ -89,6 +92,8 @@ def test(model, data, device):
 	accuracy = (test_pred == test_lbls).mean()
 	print("[+] Accuracy: {:.2f}%".format(accuracy * 100))
 
+	return test_pred, test_lbls
+
 if __name__ == "__main__":
 	msg = "Kaggle Brain Tumor MRI Dataset Training Script"
 	parser = argparse.ArgumentParser(description=msg)
@@ -101,7 +106,7 @@ if __name__ == "__main__":
 					help="Model selection.")
 	parser.add_argument("-d", "--dev", "--device", 
 					default=None, 
-					choices=["cpu", "gpu", "mps"],
+					choices=["cpu", "cuda", "mps"],
 					type=str,
 					help="Device to use for testing [cpu, gpu, mps], defaults to automatic detection.")
 	parser.add_argument("-b", "--batch_size",
@@ -130,11 +135,7 @@ if __name__ == "__main__":
 	
 	# Instantiate model choice
 	if args.model == "ViT":
-		# Nels TODO initiatiate model
-		pass
-		
-		# Nels TODO train model
-		pass
+		model = TumorViT(vit_path="google/vit-large-patch16-224")
 	else:
 		model = BrainTumorNet() # Default
 
@@ -142,13 +143,22 @@ if __name__ == "__main__":
 	logging.info(f"Training the {args.model} model:\n{model}")
 
 	# Re-use transformations from training
-	transforms = v2.Compose([
-		ReduceChannel(),
-		v2.ToDtype(torch.float32, scale=True),
-		v2.Normalize(mean=[0], std=[1]),
-		v2.Resize(size=(512, 512)),
-		v2.RandomHorizontalFlip(p=0.5),
-	])
+	if args.model == "BrainTumorNet":
+		transforms = v2.Compose([
+			ReduceChannel(),
+			v2.ToDtype(torch.float32, scale=True),
+			v2.Normalize(mean=[0], std=[1]),
+			v2.Resize(size=(512, 512)),
+			v2.RandomHorizontalFlip(p=0.5),
+		])
+	else:
+		transforms = v2.Compose([
+			EnsureRGB(),
+			v2.ToDtype(torch.float32, scale=True),
+			v2.Resize(size=(224, 224)),
+			v2.RandomHorizontalFlip(p=0.5),
+			v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),  # ImageNet-style
+			])
 
 	# Load the testing dataset
 	kaggle = KaggleBrainDataset(train=False, transform=transforms)
@@ -158,7 +168,7 @@ if __name__ == "__main__":
 						kaggle, 
 						batch_size=args.batch_size, 
 						shuffle=True,
-						num_workers=os.cpu_count()
+						num_workers=min(8, os.cpu_count())
 					)
 
 	# Load model weights if provided
@@ -173,8 +183,14 @@ if __name__ == "__main__":
 		logger.info("No weights file provided, using untrained model.")
 	
 	### Testing
-	test(	
+	test_pred, test_lbls = test(	
 		model=model, 
 		data=data_test,
 		device=device
 	)
+
+	cm = confusion_matrix(test_pred, test_lbls, labels=None)
+	disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+	disp.plot()
+	plt.savefig('test_predictions.png')  # Save to file
+	plt.close()
