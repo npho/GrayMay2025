@@ -78,7 +78,7 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 
 		# batches (data.dataset.length)
 		pbar_batch = tqdm.tqdm(total=len(data_train), colour="blue", desc="Batch", leave=False)
-		for batch, (images, labels) in enumerate(data_train):
+		for _, (images, labels) in enumerate(data_train):
 			images = images.to(device)
 			labels = labels.to(device)
 
@@ -91,34 +91,34 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 			loss.backward() # Calculate gradient
 			optimizer.step() # Update weights
 
-			if batch % 35 == 0 and batch != 0:
-				# Compute validation accuracy
-				val_pred = []
-				val_lbls = []
-				val_loss = []
-				with torch.no_grad():
-					for _, (images, labels) in enumerate(data_val):
-						images = images.to(device)
-						labels = labels.to(device)
+			#if batch % 35 == 0 and batch != 0:
+			# Compute validation accuracy
+			val_pred = []
+			val_lbls = []
+			val_loss = []
+			with torch.no_grad():
+				for _, (images, labels) in enumerate(data_val):
+					images = images.to(device)
+					labels = labels.to(device)
 
-						val_outputs = model(images)
-						val_loss_iter = loss_func(val_outputs, labels)
-						val_loss.append(val_loss_iter.item())
-						val_pred += model(images).cpu().tolist()
-						val_lbls += labels.cpu().tolist()
-				
-				# numpy object for vectorization
-				val_pred = np.array(val_pred).argmax(axis=1)
-				val_lbls = np.array(val_lbls)
+					val_outputs = model(images)
+					val_loss_iter = loss_func(val_outputs, labels)
+					val_loss.append(val_loss_iter.item())
+					val_pred += model(images).cpu().tolist()
+					val_lbls += labels.cpu().tolist()
+			
+			# numpy object for vectorization
+			val_pred = np.array(val_pred).argmax(axis=1)
+			val_lbls = np.array(val_lbls)
 
-				# Get validation accuracy
-				val_accuracy_batch.append((val_pred == val_lbls).mean())
-				val_loss_batch.append(np.array(val_loss).mean())
+			# Get validation accuracy
+			val_accuracy_batch.append((val_pred == val_lbls).mean())
+			val_loss_batch.append(np.array(val_loss).mean())
 
-				pbar_batch.set_postfix({
-						"Loss": train_loss_batch[-1],
-						"Acc": val_accuracy_batch[-1],
-					})
+			pbar_batch.set_postfix({
+					"Loss": train_loss_batch[-1],
+					"Acc": val_accuracy_batch[-1],
+				})
 				
 			pbar_batch.update(1)
 
@@ -140,6 +140,29 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 				"Acc": np.mean(val_accuracy_epoch[epoch])
 			})
 		
+		# Plot training curves
+		epochs = range(1, len(val_accuracy_epoch)+1)
+		plt.figure(figsize=(8, 5))
+		plt.plot(epochs, val_accuracy_epoch, marker='o', color='blue', label='Validation Accuracy')
+		plt.title('Validation Accuracy per Epoch')
+		plt.xlabel('Epoch')
+		plt.ylabel('Validation Accuracy (%)')
+		plt.grid(True)
+		plt.legend()
+		plt.savefig('fig/validation_accuracy.png')  # Save to file
+		plt.close()  # Close the plot
+
+		plt.figure(figsize=(8, 5))
+		plt.plot(epochs, val_loss_epoch, marker='o', color='blue', label='Validation Loss')
+		plt.plot(epochs, train_loss_epoch, marker='o', color='red', label='Training Loss')
+		plt.title('Loss per Epoch')
+		plt.xlabel('Epoch')
+		plt.ylabel('Loss')
+		plt.grid(True)
+		plt.legend()
+		plt.savefig('fig/training_loss.png')  # Save to file
+		plt.close()
+
 	return val_accuracy_epoch, val_loss_epoch, train_loss_epoch
 		
 
@@ -298,26 +321,3 @@ if __name__ == "__main__":
 		loss_func=loss_func,
 		optimizer=optimizer
 	)
-
-	epochs = range(1, len(val_loss)+1)
-
-	plt.figure(figsize=(8, 5))
-	plt.plot(epochs, val_accuracy, marker='o', color='blue', label='Validation Accuracy')
-	plt.title('Validation Accuracy per Epoch')
-	plt.xlabel('Epoch')
-	plt.ylabel('Validation Accuracy (%)')
-	plt.grid(True)
-	plt.legend()
-	plt.savefig('validation_accuracy.png')  # Save to file
-	plt.close()  # Close the plot
-
-	plt.figure(figsize=(8, 5))
-	plt.plot(epochs, val_loss, marker='o', color='blue', label='Validation Loss')
-	plt.plot(epochs, train_loss, marker='o', color='red', label='Training Loss')
-	plt.title('Loss per Epoch')
-	plt.xlabel('Epoch')
-	plt.ylabel('Loss')
-	plt.grid(True)
-	plt.legend()
-	plt.savefig('training_loss.png')  # Save to file
-	plt.close()
