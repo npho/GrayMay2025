@@ -149,8 +149,8 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 		plt.ylabel('Validation Accuracy (%)')
 		plt.grid(True)
 		plt.legend()
-		plt.savefig('fig/validation_accuracy.png')  # Save to file
-		plt.close()  # Close the plot
+		plt.savefig('fig/validation.png')
+		plt.close()
 
 		plt.figure(figsize=(8, 5))
 		plt.plot(epochs, val_loss_epoch, marker='o', color='blue', label='Validation Loss')
@@ -160,7 +160,7 @@ def train(model, weights, epochs, data, device, loss_func, optimizer):
 		plt.ylabel('Loss')
 		plt.grid(True)
 		plt.legend()
-		plt.savefig('fig/training_loss.png')  # Save to file
+		plt.savefig('fig/training.png')
 		plt.close()
 
 	return val_accuracy_epoch, val_loss_epoch, train_loss_epoch
