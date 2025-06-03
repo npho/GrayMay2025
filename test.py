@@ -73,13 +73,42 @@ def test(model, data, device):
 	
 	pbar = tqdm.tqdm(total=len(data), colour="blue", desc="Image")
 	with torch.no_grad():
-		for _, (images, labels) in enumerate(data):
+		for batch, (images, labels) in enumerate(data):
 			images = images.to(device)
 			labels = labels.to(device)
 
 			test_pred += model(images).cpu().tolist()
 			test_lbls += labels.cpu().tolist()
 
+			# Print figure
+			# Apply softmax to get probabilities
+			p = torch.nn.functional.softmax(torch.tensor(test_pred[-1]).float(), dim=0).numpy()
+			
+			# Plot the image and probabilities
+			fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+			
+			# Show the image
+			images = images.reshape([512, 512]).cpu().numpy()
+			ax1.imshow(images, cmap="gray")
+			ax1.set_title(f"Diagnosis: {data.dataset.label_map[labels]}")
+			ax1.axis('off')
+			
+			# Show the probabilities
+			c = range(len(data.dataset.label_map))
+			ax2.bar(c, p)
+			ax2.set_xticks(c)
+			ax2.set_xticklabels(data.dataset.label_map, rotation=45)
+			ax2.set_ylim(0, 1)
+			ax2.set_xlabel('Class')
+			ax2.set_ylabel('Probability')
+			ax2.set_title('Model Predictions')
+			
+			fig.tight_layout()
+
+			fig.savefig(f"fig/img-{batch:04d}.png")  # Save to file
+			plt.close()
+
+			# Update progress bar
 			pbar.update(1)
 
 	pbar.close()
@@ -158,7 +187,7 @@ if __name__ == "__main__":
 			v2.Resize(size=(224, 224)),
 			v2.RandomHorizontalFlip(p=0.5),
 			v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),  # ImageNet-style
-			])
+		])
 
 	# Load the testing dataset
 	kaggle = KaggleBrainDataset(train=False, transform=transforms)
@@ -190,7 +219,12 @@ if __name__ == "__main__":
 	)
 
 	cm = confusion_matrix(test_pred, test_lbls, labels=None)
-	disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+	disp = ConfusionMatrixDisplay(
+		confusion_matrix=cm, 
+		display_labels=kaggle.label_map
+	)
+
 	disp.plot()
-	plt.savefig('test_predictions.png')  # Save to file
+	disp.ax_.set_title(f"Test Predictions for {args.model} Model")
+	plt.savefig(f"fig/confusion-{args.model}.png")  # Save to file
 	plt.close()
