@@ -46,26 +46,41 @@ The `KaggleBrainDataset.py` script will load and prepare the data set. Please pr
 
 Exploring the use of convolutional neural networks (CNNs) for image classification as well as Vision Transformers (ViTs) for the same task.
 
-```bash
-$ python train.py -h       
-usage: train.py [-h] [-m {BrainTumorNet,ViT}] [-d {cpu,gpu,mps}] [-e EPOCHS] [-b BATCH_SIZE]
-                [-v]
+```
+$ python train.py --help
+usage: train.py [-h] [-m {BrainTumorNet,ViT}] [-d {cpu,cuda,mps}] [-e EPOCHS] [--split SPLIT]
+                [-b BATCH_SIZE] [-l LEARNING_RATE] [--decay DECAY] [-w WEIGHTS] [-v]
+                [-p PRETRAIN]
 
 Kaggle Brain Tumor MRI Dataset Training Script
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   -m {BrainTumorNet,ViT}, --model {BrainTumorNet,ViT}
                         Model selection.
-  -d {cpu,gpu,mps}, --dev {cpu,gpu,mps}, --device {cpu,gpu,mps}
+  -d {cpu,cuda,mps}, --dev {cpu,cuda,mps}, --device {cpu,cuda,mps}
                         Device to use for training [cpu, gpu, mps], defaults to automatic
                         detection.
   -e EPOCHS, --epochs EPOCHS
                         Number of epochs to train the model.
+  --split SPLIT         Train-test split ratio, defaults to 0.8 (80% train, 20% validation).
   -b BATCH_SIZE, --batch_size BATCH_SIZE
                         Batch size for training.
+  -l LEARNING_RATE, --learning_rate LEARNING_RATE
+                        Learning rate for the optimizer.
+  --decay DECAY         Weight decay for the optimizer.
+  -w WEIGHTS, --weights WEIGHTS
+                        Path to store or load the model weights file, if any.
   -v, --verbose
-$
+  -p PRETRAIN, --pretrain PRETRAIN
+                        Path to pre-trained model, if any, For ViT.
+$ 
 ```
 
+### Results
 
+![BrainTumorNet Training Plot](/fig/training-BrainTumorNet.png)
+
+![BrainTumorNet Validation Plot](/fig/validation-BrainTumorNet.png)
+
+![BrainTumorNet Confusion Matrix](/fig/confusion-BrainTumorNet.png)
