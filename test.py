@@ -7,6 +7,7 @@ import argparse
 import logging
 import numpy as np
 import tqdm
+
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
@@ -55,13 +56,14 @@ def device_check(req_dev):
 
 	return device
 
-def test(model, data, device):
+def test(model, data, device, plot):
 	"""
 	Test the model on the provided dataset.
 	Args:
 		model: The neural network model to be tested.
 		data: DataLoader containing the test dataset.
 		device: The device (CPU/GPU) to run the model on.
+		plot: Boolean flag to indicate whether to plot results.
 	"""
 	# Prepare the model
 	model.eval() # Inference mode
@@ -80,33 +82,33 @@ def test(model, data, device):
 			test_pred += model(images).cpu().tolist()
 			test_lbls += labels.cpu().tolist()
 
-			# Print figure
-			# Apply softmax to get probabilities
-			p = torch.nn.functional.softmax(torch.tensor(test_pred[-1]).float(), dim=0).numpy()
-			
-			# Plot the image and probabilities
-			fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
-			
-			# Show the image
-			images = images.reshape([512, 512]).cpu().numpy()
-			ax1.imshow(images, cmap="gray")
-			ax1.set_title(f"Diagnosis: {data.dataset.label_map[labels]}")
-			ax1.axis('off')
-			
-			# Show the probabilities
-			c = range(len(data.dataset.label_map))
-			ax2.bar(c, p)
-			ax2.set_xticks(c)
-			ax2.set_xticklabels(data.dataset.label_map, rotation=45)
-			ax2.set_ylim(0, 1)
-			ax2.set_xlabel('Class')
-			ax2.set_ylabel('Probability')
-			ax2.set_title('Model Predictions')
-			
-			fig.tight_layout()
+			if plot:
+				# Apply softmax to get probabilities
+				p = torch.nn.functional.softmax(torch.tensor(test_pred[-1]).float(), dim=0).numpy()
+				
+				# Plot the image and probabilities
+				fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+				
+				# Show the image
+				images = images.reshape([512, 512]).cpu().numpy()
+				ax1.imshow(images, cmap="gray")
+				ax1.set_title(f"Diagnosis: {data.dataset.label_map[labels]}")
+				ax1.axis('off')
+				
+				# Show the probabilities
+				c = range(len(data.dataset.label_map))
+				ax2.bar(c, p)
+				ax2.set_xticks(c)
+				ax2.set_xticklabels(data.dataset.label_map, rotation=45)
+				ax2.set_ylim(0, 1)
+				ax2.set_xlabel('Class')
+				ax2.set_ylabel('Probability')
+				ax2.set_title('Model Predictions')
+				
+				fig.tight_layout()
 
-			fig.savefig(f"fig/img-{batch:04d}.png")  # Save to file
-			plt.close()
+				fig.savefig(f"fig/img-{batch:04d}.png")  # Save to file
+				plt.close()
 
 			# Update progress bar
 			pbar.update(1)
@@ -146,6 +148,7 @@ if __name__ == "__main__":
 					default=None, 
 					type=str, 
 					help="Path to the model weights file.")
+	parser.add_argument('-p', '--plot', action='store_true')
 	parser.add_argument('-v', '--verbose', action='store_true')
 
 	args = parser.parse_args()
@@ -196,7 +199,7 @@ if __name__ == "__main__":
 	data_test = DataLoader(
 						kaggle, 
 						batch_size=args.batch_size, 
-						shuffle=True,
+						shuffle=False,
 						num_workers=min(8, os.cpu_count())
 					)
 
@@ -215,16 +218,19 @@ if __name__ == "__main__":
 	test_pred, test_lbls = test(	
 		model=model, 
 		data=data_test,
-		device=device
+		device=device,
+		plot=args.plot
 	)
 
-	cm = confusion_matrix(test_pred, test_lbls, labels=None)
-	disp = ConfusionMatrixDisplay(
-		confusion_matrix=cm, 
-		display_labels=kaggle.label_map
-	)
+	if args.plot:
+		cm = confusion_matrix(test_pred, test_lbls, labels=None)
+		disp = ConfusionMatrixDisplay(
+			confusion_matrix=cm, 
+			display_labels=kaggle.label_map
+		)
 
-	disp.plot()
-	disp.ax_.set_title(f"Test Predictions for {args.model} Model")
-	plt.savefig(f"fig/confusion-{args.model}.png")  # Save to file
-	plt.close()
+		disp.plot()
+		disp.ax_.set_title(f"Test Predictions for {args.model} Model")
+		plt.tight_layout()
+		plt.savefig(f"fig/confusion-{args.model}.png")
+		plt.close()
